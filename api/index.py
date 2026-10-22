@@ -247,6 +247,14 @@ init_db()
 
 app = FastAPI(title="anonc by ascloud")
 
+@app.middleware("http")
+async def vercel_path_fix_middleware(request: Request, call_next):
+    raw_path = request.scope.get("path", "")
+    if raw_path in ("/api/index.py", "/api/index", "/api/index.py/", "/api/index/"):
+        matched = request.headers.get("x-matched-path") or request.headers.get("x-original-path") or "/"
+        request.scope["path"] = matched
+    return await call_next(request)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -3076,6 +3084,10 @@ HTML_PAGE = """<!DOCTYPE html>
 """
 
 @app.get("/", response_class=HTMLResponse)
+@app.get("/api/index.py", response_class=HTMLResponse)
+@app.get("/api/index", response_class=HTMLResponse)
+@app.get("/index", response_class=HTMLResponse)
+@app.get("/index.py", response_class=HTMLResponse)
 async def serve_index():
     return HTMLResponse(content=HTML_PAGE)
 
